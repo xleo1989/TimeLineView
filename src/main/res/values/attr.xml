@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TimeLineView">
+        <attr name="strokeWidth" format="dimension"/>
+        <attr name="relativeGravity" format="enum">
+            <enum name="BEGIN" value="0"/>
+            <enum name="CENTER" value="1"/>
+            <enum name="END" value="2"/>
+        </attr>
+        <attr name="radius" format="dimension"/>
+        <attr name="directionStyle" format="enum">
+            <enum name="HORIZONTAL" value="0"/>
+            <enum name="VERTICAL" value="1"/>
+        </attr>
+        <attr name="offset" format="dimension"/>
+        <attr name="strokeColor" format="color"/>
+        <attr name="markerStyle" format="enum">
+            <enum name="text" value="0"/>
+            <enum name="circleFilled" value="1"/>
+        </attr>
+        <attr name="circleActiveBigger" format="color"/>
+        <attr name="circleActive" format="color"/>
+        <attr name="radiusInner" format="dimension"/>
+        <attr name="circleInactive" format="color"/>
+        <attr name="CurrentStatus" format="enum">
+            <enum name="Complete" value="2"/>
+            <enum name="Active" value="1"/>
+            <enum name="Inactive" value="0"/>
+        </attr>
+        <attr name="drawText" format="boolean"/>
+        <attr name="completeRes" format="reference"/>
+        <attr name="notShowPointLine" format="boolean"/>
+        <attr name="markPosition" format="enum">
+            <enum name="start" value="1"/>
+            <enum name="middle" value="0"/>
+            <enum name="end" value="2"/>
+        </attr>
+        <attr name="lastStatus" format="enum">
+            <enum name="Complete" value="2"/>
+            <enum name="Active" value="1"/>
+            <enum name="Inactive" value="0"/>
+        </attr>
+        <attr name="doAnimation" format="boolean"/>
+        <attr name="inactiveRes" format="reference"/>
+        <attr name="activeRes" format="reference"/>
+    </declare-styleable>
+</resources>
