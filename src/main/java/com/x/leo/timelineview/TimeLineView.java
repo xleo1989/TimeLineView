@@ -1,23 +1,18 @@
 package com.x.leo.timelineview;
 
-import android.animation.Animator;
-import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.IntDef;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.view.View;
-import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -58,6 +53,10 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private boolean doAnimation;
     private int mInactiveRes;
     private int mActiveRes;
+    private float markerAnimatorValue = 1;
+    private ValueAnimator animator;
+    private float stroke2AnimatorValue = 1;
+    private float stroke1AnimatorValue = 1;
 
     public void setLastState(@CurrentState int lastState) {
         if (this.lastState != lastState) {
@@ -148,6 +147,11 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         notShowPointLine = typedArray.getBoolean(R.styleable.TimeLineView_notShowPointLine, false);
         lastState = typedArray.getInt(R.styleable.TimeLineView_lastStatus, mCurrentStatus);
         doAnimation = typedArray.getBoolean(R.styleable.TimeLineView_doAnimation, false);
+        if (doAnimation) {
+            markerAnimatorValue = 0;
+            stroke2AnimatorValue = 0;
+            stroke1AnimatorValue = 0;
+        }
         if (notShowPointLine) {
             mMarkPosition = typedArray.getInt(R.styleable.TimeLineView_markPosition, 0);
         }
@@ -178,35 +182,77 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     }
 
 
+//    @Override
+//    protected void onVisibilityChanged(View changedView, int visibility) {
+//        if (changedView == this && visibility == View.VISIBLE && doAnimation) {
+//            // Log.w(TAG, changedView.toString() + ":enterAnimation" + "==time:" + System.currentTimeMillis());
+//            enterAnimation();
+//        } else {
+//            //  Log.w(TAG, "onVisibilityChanged: ");
+//        }
+//    }
+
     @Override
-    protected void onVisibilityChanged(View changedView, int visibility) {
-        if (changedView == this && visibility == View.VISIBLE && doAnimation) {
-           // Log.w(TAG, changedView.toString() + ":enterAnimation" + "==time:" + System.currentTimeMillis());
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (doAnimation) {
             enterAnimation();
-        } else {
-          //  Log.w(TAG, "onVisibilityChanged: ");
         }
     }
 
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (doAnimation) {
+            stopAnimation();
+        }
+    }
+
+    private void stopAnimation() {
+        if (animator != null && (animator.isRunning() || animator.isStarted())) {
+            animator.cancel();
+        }
+    }
+
+    private int durationFaction = 350;
     private void enterAnimation() {
-        String localPropertyName = "rotationY";
-        if (mDirectionStyle == HORIZONTAL) {
-            localPropertyName = "rotationX";
+        if (notShowPointLine) {
+            switch (mMarkPosition) {
+                case POINT_END:
+                    animator = ValueAnimator.ofFloat(-1f, 0.0f, 1f);
+                    animator.setDuration(2 * durationFaction);
+                    break;
+                case POINT_MIDDLE:
+                    animator = ValueAnimator.ofFloat(-1f, 0.0f, 1f, 2);
+                    animator.setDuration(3 * durationFaction);
+                    break;
+                case POINT_START:
+                    animator = ValueAnimator.ofFloat(0.0f, 1f, 2);
+                    animator.setDuration(2 * durationFaction);
+                    break;
+                default:
+                    throw new IllegalArgumentException("error mark positiion");
+            }
+        }else{
+            animator = ValueAnimator.ofFloat(-1f, 0.0f, 1f, 2);
+            animator.setDuration(3 * durationFaction);
         }
-        Animator animation = ObjectAnimator.ofFloat(this, localPropertyName, 270, 360);
-        animation.setDuration(200);
-        animation.setInterpolator(new AccelerateDecelerateInterpolator());
-        AnimationUtils.addAnimators(this, animation);
-    }
-
-    public void addAnimator() {
-        post(new Runnable() {
+        animator.setInterpolator(new LinearInterpolator());
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
-            public void run() {
-                enterAnimation();
-
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float animatedValue = (float) animation.getAnimatedValue();
+                if (animatedValue < 0) {
+                    stroke1AnimatorValue = 1 + animatedValue;
+                } else if (animatedValue <= 1) {
+                    markerAnimatorValue = animatedValue;
+                } else if (animatedValue <= 2) {
+                    stroke2AnimatorValue = animatedValue - 1;
+                }
+                invalidate();
             }
         });
+        AnimationUtils.addAnimators(this, animator);
     }
 
     @Override
@@ -261,8 +307,9 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        Drawable drawable = new ColorDrawable(Color.DKGRAY);
-        mPaint.setStyle(Paint.Style.STROKE);
+        //lines no animator
+        mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+        mPaint.setStrokeWidth(mStrokeWidth);
         if (notShowPointLine) {
             switch (mMarkPosition) {
                 case POINT_START:
@@ -281,33 +328,44 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
             drawFirstLine(canvas);
             drawSecondLine(canvas);
         }
-
+        canvas.save();
+        //text and circles do animator
+        //canvas.rotate(markerAnimatorValue);
+        switch (mDirectionStyle) {
+            case HORIZONTAL:
+                canvas.scale(markerAnimatorValue, markerAnimatorValue, mCenterPointer.x, mCenterPointer.y);
+                break;
+            case VERTICAL:
+                canvas.scale(markerAnimatorValue, markerAnimatorValue, mCenterPointer.x, mCenterPointer.y);
+                break;
+            default:
+                throw new IllegalArgumentException("wrong direction");
+        }
         CharSequence text = getText();
+        mPaint.setStrokeWidth(0f);
         switch (mMarkStyle) {
             case TEXTSTYLE:
-                mPaint.setStyle(Paint.Style.STROKE);
                 mPaint.setColor(mStrokeColor);
-                canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius - mStrokeWidth, mPaint);
+                canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
                 drawIndexText(canvas, text);
                 break;
             case CIRCLESTYLE:
-                mPaint.setStyle(Paint.Style.FILL);
                 switch (mCurrentStatus) {
                     case COMPLETE:
                         mPaint.setColor(mMarkColor2);
-                        if (mCompleteRes ==0) {
-                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius - mStrokeWidth, mPaint);
+                        if (mCompleteRes == 0) {
+                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
                         }
                         if (mCompleteRes != 0) {
-                            drawBitmap(canvas,mCompleteRes);
+                            drawDrawable(canvas, mCompleteRes);
                         }
                         break;
                     case INACTIVE:
                         mPaint.setColor(mStrokeColor);
                         if (mInactiveRes == 0) {
-                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius - mStrokeWidth, mPaint);
-                        }else{
-                            drawBitmap(canvas,mInactiveRes);
+                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
+                        } else {
+                            drawDrawable(canvas, mInactiveRes);
                         }
                         if (drawText) {
                             drawIndexText(canvas, text);
@@ -316,11 +374,11 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                     case ACTIVE:
                         mPaint.setColor(mMarkColor1);
                         if (mActiveRes == 0) {
-                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius - mStrokeWidth, mPaint);
+                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
                             mPaint.setColor(mMarkColor2);
-                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadiusInner - mStrokeWidth, mPaint);
-                        }else{
-                            drawBitmap(canvas,mActiveRes);
+                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadiusInner, mPaint);
+                        } else {
+                            drawDrawable(canvas, mActiveRes);
                         }
                         if (drawText) {
                             drawIndexText(canvas, text);
@@ -330,13 +388,14 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
 
                 break;
         }
+        canvas.restore();
     }
 
-    private void drawBitmap(Canvas canvas, int res) {
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), res);
-        Rect srcRect = null;
-        Rect desRect = new Rect(mCenterPointer.x - (mRadius - mStrokeWidth), mCenterPointer.y - (mRadius - mStrokeWidth), mCenterPointer.x + (mRadius - mStrokeWidth), mCenterPointer.y + (mRadius - mStrokeWidth));
-        canvas.drawBitmap(bitmap, srcRect, desRect, null);
+    private void drawDrawable(Canvas canvas, int res) {
+        Drawable drawable = getContext().getResources().getDrawable(res);
+        Rect desRect = new Rect(mCenterPointer.x - mRadius, mCenterPointer.y - mRadius, mCenterPointer.x + mRadius, mCenterPointer.y + mRadius);
+        drawable.setBounds(desRect);
+        drawable.draw(canvas);
     }
 
     private void drawFirstLine(Canvas canvas) {
@@ -351,10 +410,12 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
-                canvas.drawLine(getPaddingLeft(), mCenterPointer.y, mCenterPointer.x - mRadius + mStrokeWidth, mCenterPointer.y, mPaint);
+                float localEndX = getPaddingLeft() + stroke1AnimatorValue * (mCenterPointer.x  - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
+                canvas.drawLine(getPaddingLeft(), mCenterPointer.y, localEndX, mCenterPointer.y, mPaint);
                 break;
             case TimeLineView.VERTICAL:
-                canvas.drawLine(mCenterPointer.x, getPaddingTop(), mCenterPointer.x, mCenterPointer.y - mRadius + mStrokeWidth, mPaint);
+                float localEndY = getPaddingTop() +  stroke1AnimatorValue * (mCenterPointer.y  - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
+                canvas.drawLine(mCenterPointer.x, getPaddingTop(), mCenterPointer.x, localEndY, mPaint);
                 break;
         }
     }
@@ -371,10 +432,12 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
-                canvas.drawLine(mCenterPointer.x + mRadius - mStrokeWidth, mCenterPointer.y, mMeasuredWidth - getPaddingRight(), mCenterPointer.y, mPaint);
+                float localEndX = mCenterPointer.x + mRadius - mStrokeWidth + stroke2AnimatorValue * (mMeasuredWidth - getPaddingRight() - (mCenterPointer.x + mRadius - mStrokeWidth));
+                canvas.drawLine(mCenterPointer.x + mRadius - mStrokeWidth, mCenterPointer.y, localEndX, mCenterPointer.y, mPaint);
                 break;
             case TimeLineView.VERTICAL:
-                canvas.drawLine(mCenterPointer.x, mCenterPointer.y + mRadius - mStrokeWidth, mCenterPointer.x, mMeasuredHeight - getPaddingBottom(), mPaint);
+                float localEndY = stroke2AnimatorValue * (mMeasuredHeight - getPaddingBottom() - (mCenterPointer.y + mRadius - mStrokeWidth)) + mCenterPointer.y + mRadius - mStrokeWidth;
+                canvas.drawLine(mCenterPointer.x, mCenterPointer.y + mRadius - mStrokeWidth, mCenterPointer.x, localEndY, mPaint);
                 break;
         }
     }
@@ -389,10 +452,11 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private void drawIndexText(Canvas canvas, CharSequence text) {
         if (text != null && text.length() != 0) {
             int length = text.length();
-            float textSize = getTextSize();
             TextPaint paint = getPaint();
             paint.setColor(getTextColors().getColorForState(getDrawableState(), Color.BLACK));
-            canvas.drawText(text.toString(), mCenterPointer.x - textSize * length / 4, mCenterPointer.y + textSize / 4, paint);
+            Rect bounds = new Rect();
+            paint.getTextBounds(text.toString(), 0, length, bounds);
+            canvas.drawText(text.toString(), mCenterPointer.x - bounds.width() / 2, mCenterPointer.y + bounds.height() / 2, paint);
         }
     }
 
