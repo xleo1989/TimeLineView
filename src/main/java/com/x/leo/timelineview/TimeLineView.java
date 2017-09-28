@@ -42,8 +42,8 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
 
     private int mStrokeColor;
     private int mMarkStyle;
-    private int mMarkColor1;
-    private int mMarkColor2;
+    private int mCircleBigActColor;
+    private int mCircleSmallActColor;
     private int mCurrentStatus;
     private int mRadiusInner;
     private int mCompleteRes;
@@ -53,10 +53,11 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private boolean doAnimation;
     private int mInactiveRes;
     private int mActiveRes;
-    private float markerAnimatorValue = 1;
     private ValueAnimator animator;
+    private float markerAnimatorValue = 1;
     private float stroke2AnimatorValue = 1;
     private float stroke1AnimatorValue = 1;
+    private int mCircleInactColor;
 
     public void setLastState(@CurrentState int lastState) {
         if (this.lastState != lastState) {
@@ -159,8 +160,9 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
             case TEXTSTYLE:
                 break;
             case CIRCLESTYLE:
-                mMarkColor1 = typedArray.getColor(R.styleable.TimeLineView_circleActiveBigger, mStrokeColor);
-                mMarkColor2 = typedArray.getColor(R.styleable.TimeLineView_circleActive, mMarkColor1);
+                mCircleBigActColor = typedArray.getColor(R.styleable.TimeLineView_circleActiveBigger, mStrokeColor);
+                mCircleSmallActColor = typedArray.getColor(R.styleable.TimeLineView_circleActive, mCircleBigActColor);
+                mCircleInactColor = typedArray.getColor(R.styleable.TimeLineView_circleInactive, mStrokeColor);
                 mRadiusInner = typedArray.getDimensionPixelSize(R.styleable.TimeLineView_radiusInner, mRadius - 10);
                 mCurrentStatus = typedArray.getInt(R.styleable.TimeLineView_CurrentStatus, 0);
                 drawText = typedArray.getBoolean(R.styleable.TimeLineView_drawText, false);
@@ -205,6 +207,9 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         super.onDetachedFromWindow();
         if (doAnimation) {
             stopAnimation();
+            markerAnimatorValue = 0;
+            stroke2AnimatorValue = 0;
+            stroke1AnimatorValue = 0;
         }
     }
 
@@ -214,7 +219,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
     }
 
-    private int durationFaction = 350;
+    private int durationFaction = 280;
     private void enterAnimation() {
         if (notShowPointLine) {
             switch (mMarkPosition) {
@@ -352,7 +357,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
             case CIRCLESTYLE:
                 switch (mCurrentStatus) {
                     case COMPLETE:
-                        mPaint.setColor(mMarkColor2);
+                        mPaint.setColor(mCircleBigActColor);
                         if (mCompleteRes == 0) {
                             canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
                         }
@@ -361,7 +366,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                         }
                         break;
                     case INACTIVE:
-                        mPaint.setColor(mStrokeColor);
+                        mPaint.setColor(mCircleInactColor);
                         if (mInactiveRes == 0) {
                             canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
                         } else {
@@ -372,10 +377,10 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                         }
                         break;
                     case ACTIVE:
-                        mPaint.setColor(mMarkColor1);
+                        mPaint.setColor(mCircleBigActColor);
                         if (mActiveRes == 0) {
                             canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
-                            mPaint.setColor(mMarkColor2);
+                            mPaint.setColor(mCircleSmallActColor);
                             canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadiusInner, mPaint);
                         } else {
                             drawDrawable(canvas, mActiveRes);
@@ -401,7 +406,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private void drawFirstLine(Canvas canvas) {
         switch (lastState) {
             case COMPLETE:
-                mPaint.setColor(mMarkColor2);
+                mPaint.setColor(mCircleSmallActColor);
                 break;
             case INACTIVE:
             case ACTIVE:
@@ -423,7 +428,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private void drawSecondLine(Canvas canvas) {
         switch (mCurrentStatus) {
             case COMPLETE:
-                mPaint.setColor(mMarkColor2);
+                mPaint.setColor(mCircleSmallActColor);
                 break;
             case INACTIVE:
             case ACTIVE:
@@ -455,8 +460,13 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
             TextPaint paint = getPaint();
             paint.setColor(getTextColors().getColorForState(getDrawableState(), Color.BLACK));
             Rect bounds = new Rect();
+            paint.setTextAlign(Paint.Align.CENTER);
             paint.getTextBounds(text.toString(), 0, length, bounds);
-            canvas.drawText(text.toString(), mCenterPointer.x - bounds.width() / 2, mCenterPointer.y + bounds.height() / 2, paint);
+            canvas.drawText(text.toString(), mCenterPointer.x, mCenterPointer.y + bounds.height() / 2, paint);
+//            canvas.drawLine(mCenterPointer.x - bounds.width() / 2,0f,mCenterPointer.x - bounds.width() / 2,mMeasuredHeight,paint);
+//            canvas.drawLine(0,mCenterPointer.y + bounds.height() / 2,mMeasuredWidth,mCenterPointer.y + bounds.height() / 2,paint);
+//            canvas.drawLine(mCenterPointer.x + bounds.width() / 2,0,mCenterPointer.x + bounds.width() / 2,mMeasuredHeight,paint);
+//            canvas.drawLine(0,mCenterPointer.y - bounds.height() / 2,mMeasuredWidth,mCenterPointer.y - bounds.height() / 2,paint);
         }
     }
 
