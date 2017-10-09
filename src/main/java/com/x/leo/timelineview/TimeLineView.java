@@ -1,5 +1,7 @@
 package com.x.leo.timelineview;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -12,6 +14,7 @@ import android.graphics.drawable.Drawable;
 import android.support.annotation.IntDef;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.view.View;
 import android.view.animation.LinearInterpolator;
 
 import java.lang.annotation.Retention;
@@ -250,14 +253,36 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 if (animatedValue < 0) {
                     stroke1AnimatorValue = 1 + animatedValue;
                 } else if (animatedValue <= 1) {
+                    if (stroke1AnimatorValue != 1) {
+                        stroke1AnimatorValue = 1;
+                    }
                     markerAnimatorValue = animatedValue;
                 } else if (animatedValue <= 2) {
+                    if (markerAnimatorValue != 1) {
+                        markerAnimatorValue = 1;
+                    }
                     stroke2AnimatorValue = animatedValue - 1;
                 }
                 invalidate();
             }
         });
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (((isStroke1Show() && stroke1AnimatorValue != 1)||markerAnimatorValue != 1 || (isStroke2Show() && stroke2AnimatorValue != 1))&&getWindowVisibility() != View.GONE) {
+                    enterAnimation();
+                }
+            }
+        });
         AnimationUtils.addAnimators(this, animator);
+    }
+
+    private boolean isStroke2Show() {
+        return !(notShowPointLine && mMarkPosition == POINT_END);
+    }
+
+    private boolean isStroke1Show(){
+        return !(notShowPointLine && mMarkPosition == POINT_START);
     }
 
     @Override
