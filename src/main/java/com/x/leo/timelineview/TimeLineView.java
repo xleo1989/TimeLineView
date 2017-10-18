@@ -35,7 +35,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private int mMeasuredWidth;
     private int mMeasuredHeight;
     private int mRadius;
-    private Point mCenterPointer;
+    private Point mCenterPointer = new Point();
     private int mStrokeWidth;
     private Paint mPaint;
     private int mDirectionStyle;
@@ -174,6 +174,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 mActiveRes = typedArray.getResourceId(R.styleable.TimeLineView_activeRes, 0);
                 break;
         }
+        typedArray.recycle();
         mPaint.setStrokeWidth(mStrokeWidth);
         mPaint.setStyle(Paint.Style.STROKE);
     }
@@ -293,7 +294,6 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         if (mRadius == 0) {
             mRadius = Math.min(mMeasuredHeight - getPaddingTop() - getPaddingBottom(), mMeasuredWidth - getPaddingLeft() - getPaddingRight()) / 2;
         }
-        mCenterPointer = new Point();
         if (mDirectionStyle == -1) {
             if (mMeasuredHeight - getPaddingTop() - getPaddingBottom() > mMeasuredWidth - getPaddingLeft() - getPaddingRight()) {
                 mDirectionStyle = TimeLineView.VERTICAL;
