@@ -223,7 +223,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
     }
 
-    private int durationFaction = 280;
+    private int durationFaction = 180;
     private void enterAnimation() {
         if (notShowPointLine) {
             switch (mMarkPosition) {
