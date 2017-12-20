@@ -13,7 +13,7 @@
             <enum name="VERTICAL" value="1"/>
         </attr>
         <attr name="offset" format="dimension"/>
-        <attr name="strokeColor" format="color"/>
+        <attr name="strokeColor" format="color|reference"/>
         <attr name="markerStyle" format="enum">
             <enum name="text" value="0"/>
             <enum name="circleFilled" value="1"/>

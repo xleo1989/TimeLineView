@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -43,7 +44,6 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
 
     private boolean drawText;
 
-    private int mStrokeColor;
     private int mMarkStyle;
     private int mCircleBigActColor;
     private int mCircleSmallActColor;
@@ -61,10 +61,19 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private float stroke2AnimatorValue = 1;
     private float stroke1AnimatorValue = 1;
     private int mCircleInactColor;
+    private int nextState;
+    private ColorStateList mStrokeColor;
 
     public void setLastState(@CurrentState int lastState) {
         if (this.lastState != lastState) {
             this.lastState = lastState;
+            invalidate();
+        }
+    }
+
+    public void setNextState(int nextState) {
+        if (this.nextState != nextState) {
+            this.nextState = nextState;
             invalidate();
         }
     }
@@ -146,7 +155,13 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         mRadius = typedArray.getDimensionPixelSize(R.styleable.TimeLineView_radius, 0);
         mDirectionStyle = typedArray.getInt(R.styleable.TimeLineView_directionStyle, -1);
         mOffset = typedArray.getDimensionPixelSize(R.styleable.TimeLineView_offset, 0);
-        mStrokeColor = typedArray.getColor(R.styleable.TimeLineView_strokeColor, Color.GRAY);
+        if (typedArray.hasValue(R.styleable.TimeLineView_strokeColor)) {
+            try {
+                mStrokeColor = typedArray.getColorStateList(R.styleable.TimeLineView_strokeColor);
+            } catch (Throwable e) {
+                mStrokeColor = new ColorStateList(new int[][]{}, new int[]{typedArray.getColor(R.styleable.TimeLineView_strokeColor, Color.GRAY)});
+            }
+        }
         mMarkStyle = typedArray.getInt(R.styleable.TimeLineView_markerStyle, 0);
         notShowPointLine = typedArray.getBoolean(R.styleable.TimeLineView_notShowPointLine, false);
         lastState = typedArray.getInt(R.styleable.TimeLineView_lastStatus, mCurrentStatus);
@@ -163,9 +178,9 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
             case TEXTSTYLE:
                 break;
             case CIRCLESTYLE:
-                mCircleBigActColor = typedArray.getColor(R.styleable.TimeLineView_circleActiveBigger, mStrokeColor);
+                mCircleBigActColor = typedArray.getColor(R.styleable.TimeLineView_circleActiveBigger, Color.GRAY);
                 mCircleSmallActColor = typedArray.getColor(R.styleable.TimeLineView_circleActive, mCircleBigActColor);
-                mCircleInactColor = typedArray.getColor(R.styleable.TimeLineView_circleInactive, mStrokeColor);
+                mCircleInactColor = typedArray.getColor(R.styleable.TimeLineView_circleInactive, Color.GRAY);
                 mRadiusInner = typedArray.getDimensionPixelSize(R.styleable.TimeLineView_radiusInner, mRadius - 10);
                 mCurrentStatus = typedArray.getInt(R.styleable.TimeLineView_CurrentStatus, 0);
                 drawText = typedArray.getBoolean(R.styleable.TimeLineView_drawText, false);
@@ -224,6 +239,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     }
 
     private int durationFaction = 180;
+
     private void enterAnimation() {
         if (notShowPointLine) {
             switch (mMarkPosition) {
@@ -242,7 +258,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 default:
                     throw new IllegalArgumentException("error mark positiion");
             }
-        }else{
+        } else {
             animator = ValueAnimator.ofFloat(-1f, 0.0f, 1f, 2);
             animator.setDuration(3 * durationFaction);
         }
@@ -270,7 +286,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         animator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                if (((isStroke1Show() && stroke1AnimatorValue != 1)||markerAnimatorValue != 1 || (isStroke2Show() && stroke2AnimatorValue != 1))&&getWindowVisibility() != View.GONE) {
+                if (((isStroke1Show() && stroke1AnimatorValue != 1) || markerAnimatorValue != 1 || (isStroke2Show() && stroke2AnimatorValue != 1)) && getWindowVisibility() != View.GONE) {
                     enterAnimation();
                 }
             }
@@ -282,7 +298,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         return !(notShowPointLine && mMarkPosition == POINT_END);
     }
 
-    private boolean isStroke1Show(){
+    private boolean isStroke1Show() {
         return !(notShowPointLine && mMarkPosition == POINT_START);
     }
 
@@ -375,7 +391,18 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         mPaint.setStrokeWidth(0f);
         switch (mMarkStyle) {
             case TEXTSTYLE:
-                mPaint.setColor(mStrokeColor);
+                switch (mCurrentStatus) {
+                    case INACTIVE:
+                        mPaint.setColor(mCircleInactColor);
+                        break;
+                    case ACTIVE:
+                        mPaint.setColor(mCircleSmallActColor);
+                        break;
+                    case COMPLETE:
+                        mPaint.setColor(mCircleInactColor);
+                        break;
+                }
+
                 canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
                 drawIndexText(canvas, text);
                 break;
@@ -431,33 +458,37 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private void drawFirstLine(Canvas canvas) {
         switch (lastState) {
             case COMPLETE:
-                mPaint.setColor(mCircleSmallActColor);
+                mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_selected}, mStrokeColor.getDefaultColor()));
                 break;
             case INACTIVE:
+                mPaint.setColor(mStrokeColor.getDefaultColor());
+                break;
             case ACTIVE:
-                mPaint.setColor(mStrokeColor);
+                mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_activated}, mStrokeColor.getDefaultColor()));
                 break;
         }
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
-                float localEndX = getPaddingLeft() + stroke1AnimatorValue * (mCenterPointer.x  - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
+                float localEndX = getPaddingLeft() + stroke1AnimatorValue * (mCenterPointer.x - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
                 canvas.drawLine(getPaddingLeft(), mCenterPointer.y, localEndX, mCenterPointer.y, mPaint);
                 break;
             case TimeLineView.VERTICAL:
-                float localEndY = getPaddingTop() +  stroke1AnimatorValue * (mCenterPointer.y  - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
+                float localEndY = getPaddingTop() + stroke1AnimatorValue * (mCenterPointer.y - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
                 canvas.drawLine(mCenterPointer.x, getPaddingTop(), mCenterPointer.x, localEndY, mPaint);
                 break;
         }
     }
 
     private void drawSecondLine(Canvas canvas) {
-        switch (mCurrentStatus) {
+        switch (nextState) {
             case COMPLETE:
-                mPaint.setColor(mCircleSmallActColor);
+                mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_selected}, mStrokeColor.getDefaultColor()));
                 break;
             case INACTIVE:
+                mPaint.setColor(mStrokeColor.getDefaultColor());
+                break;
             case ACTIVE:
-                mPaint.setColor(mStrokeColor);
+                mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_activated}, mStrokeColor.getDefaultColor()));
                 break;
         }
         switch (mDirectionStyle) {
@@ -559,12 +590,5 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     public void setOffset(int offset) {
         mOffset = Utils.dp2Px(getContext(), offset);
     }
-
-    public int getStrokeColor() {
-        return mStrokeColor;
-    }
-
-    public void setStrokeColor(int strokeColor) {
-        mStrokeColor = strokeColor;
-    }
 }
+
