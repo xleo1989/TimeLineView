@@ -63,6 +63,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     private int mCircleInactColor;
     private int nextState;
     private ColorStateList mStrokeColor;
+    private boolean isInactiveSmall = false;
 
     public void setLastState(@CurrentState int lastState) {
         if (this.lastState != lastState) {
@@ -162,6 +163,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 mStrokeColor = new ColorStateList(new int[][]{}, new int[]{typedArray.getColor(R.styleable.TimeLineView_strokeColor, Color.GRAY)});
             }
         }
+        isInactiveSmall = typedArray.getBoolean(R.styleable.TimeLineView_smallInactive,false);
         mMarkStyle = typedArray.getInt(R.styleable.TimeLineView_markerStyle, 0);
         notShowPointLine = typedArray.getBoolean(R.styleable.TimeLineView_notShowPointLine, false);
         lastState = typedArray.getInt(R.styleable.TimeLineView_lastStatus, mCurrentStatus);
@@ -420,7 +422,8 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                     case INACTIVE:
                         mPaint.setColor(mCircleInactColor);
                         if (mInactiveRes == 0) {
-                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, mRadius, mPaint);
+                            int localRadius = isInactiveSmall? mRadiusInner:mRadius;
+                            canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, localRadius, mPaint);
                         } else {
                             drawDrawable(canvas, mInactiveRes);
                         }
@@ -449,8 +452,9 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     }
 
     private void drawDrawable(Canvas canvas, int res) {
+        int localRadius = isInactiveSmall? mRadiusInner:mRadius;
         Drawable drawable = getContext().getResources().getDrawable(res);
-        Rect desRect = new Rect(mCenterPointer.x - mRadius, mCenterPointer.y - mRadius, mCenterPointer.x + mRadius, mCenterPointer.y + mRadius);
+        Rect desRect = new Rect(mCenterPointer.x - localRadius, mCenterPointer.y - localRadius, mCenterPointer.x + localRadius, mCenterPointer.y + localRadius);
         drawable.setBounds(desRect);
         drawable.draw(canvas);
     }
@@ -469,11 +473,11 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
-                float localEndX = getPaddingLeft() + stroke1AnimatorValue * (mCenterPointer.x - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
+                float localEndX = getPaddingLeft() + stroke1AnimatorValue * (mCenterPointer.x - getPaddingLeft()) - markerAnimatorValue * (mRadiusInner - mStrokeWidth);
                 canvas.drawLine(getPaddingLeft(), mCenterPointer.y, localEndX, mCenterPointer.y, mPaint);
                 break;
             case TimeLineView.VERTICAL:
-                float localEndY = getPaddingTop() + stroke1AnimatorValue * (mCenterPointer.y - getPaddingLeft()) - markerAnimatorValue * (mRadius - mStrokeWidth);
+                float localEndY = getPaddingTop() + stroke1AnimatorValue * (mCenterPointer.y - getPaddingLeft()) - markerAnimatorValue * (mRadiusInner - mStrokeWidth);
                 canvas.drawLine(mCenterPointer.x, getPaddingTop(), mCenterPointer.x, localEndY, mPaint);
                 break;
         }
@@ -493,12 +497,12 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
-                float localEndX = mCenterPointer.x + mRadius - mStrokeWidth + stroke2AnimatorValue * (mMeasuredWidth - getPaddingRight() - (mCenterPointer.x + mRadius - mStrokeWidth));
-                canvas.drawLine(mCenterPointer.x + mRadius - mStrokeWidth, mCenterPointer.y, localEndX, mCenterPointer.y, mPaint);
+                float localEndX = mCenterPointer.x + mRadiusInner - mStrokeWidth + stroke2AnimatorValue * (mMeasuredWidth - getPaddingRight() - (mCenterPointer.x + mRadiusInner - mStrokeWidth));
+                canvas.drawLine(mCenterPointer.x + mRadiusInner - mStrokeWidth, mCenterPointer.y, localEndX, mCenterPointer.y, mPaint);
                 break;
             case TimeLineView.VERTICAL:
-                float localEndY = stroke2AnimatorValue * (mMeasuredHeight - getPaddingBottom() - (mCenterPointer.y + mRadius - mStrokeWidth)) + mCenterPointer.y + mRadius - mStrokeWidth;
-                canvas.drawLine(mCenterPointer.x, mCenterPointer.y + mRadius - mStrokeWidth, mCenterPointer.x, localEndY, mPaint);
+                float localEndY = stroke2AnimatorValue * (mMeasuredHeight - getPaddingBottom() - (mCenterPointer.y + mRadiusInner - mStrokeWidth)) + mCenterPointer.y + mRadiusInner - mStrokeWidth;
+                canvas.drawLine(mCenterPointer.x, mCenterPointer.y + mRadiusInner - mStrokeWidth, mCenterPointer.x, localEndY, mPaint);
                 break;
         }
     }

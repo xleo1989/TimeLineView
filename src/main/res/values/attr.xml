@@ -43,5 +43,6 @@
         <attr name="doAnimation" format="boolean"/>
         <attr name="inactiveRes" format="reference"/>
         <attr name="activeRes" format="reference"/>
+        <attr name="smallInactive" format="boolean"/>
     </declare-styleable>
 </resources>
