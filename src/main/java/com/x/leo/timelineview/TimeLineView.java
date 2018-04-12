@@ -111,7 +111,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
 
     public static final int BEGIN = 0;
     public static final int CENTER = 1;
-    public static final int END = 2;
+    public static final int END = 1 << 1;
 
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(flag = true,
@@ -133,6 +133,19 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     public static final int POINT_START = 1;
     public static final int POINT_MIDDLE = 0;
     public static final int POINT_END = 2;
+
+    private int mStrokeStyle = 0;
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({FORWARD, BACKWARD, NONE})
+    public @interface StrokeStyle {
+    }
+
+    public static final int FORWARD = 1 << 3;
+    public static final int BACKWARD = 2 << 3;
+    public static final int NONE = 0;
+    public static final int CURRENT = 3 << 3;
+
     private int mRelativeGravity;
 
     public TimeLineView(Context context) {
@@ -163,7 +176,10 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 mStrokeColor = new ColorStateList(new int[][]{}, new int[]{typedArray.getColor(R.styleable.TimeLineView_strokeColor, Color.GRAY)});
             }
         }
-        isInactiveSmall = typedArray.getBoolean(R.styleable.TimeLineView_smallInactive,false);
+        if (typedArray.hasValue(R.styleable.TimeLineView_strokeStyle)) {
+            mStrokeStyle = typedArray.getInt(R.styleable.TimeLineView_strokeStyle, 0) << 3;
+        }
+        isInactiveSmall = typedArray.getBoolean(R.styleable.TimeLineView_smallInactive, false);
         mMarkStyle = typedArray.getInt(R.styleable.TimeLineView_markerStyle, 0);
         notShowPointLine = typedArray.getBoolean(R.styleable.TimeLineView_notShowPointLine, false);
         lastState = typedArray.getInt(R.styleable.TimeLineView_lastStatus, mCurrentStatus);
@@ -422,7 +438,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                     case INACTIVE:
                         mPaint.setColor(mCircleInactColor);
                         if (mInactiveRes == 0) {
-                            int localRadius = isInactiveSmall? mRadiusInner:mRadius;
+                            int localRadius = isInactiveSmall ? mRadiusInner : mRadius;
                             canvas.drawCircle(mCenterPointer.x, mCenterPointer.y, localRadius, mPaint);
                         } else {
                             drawDrawable(canvas, mInactiveRes);
@@ -452,25 +468,16 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
     }
 
     private void drawDrawable(Canvas canvas, int res) {
-        int localRadius = isInactiveSmall? mRadiusInner:mRadius;
+        int localRadius = isInactiveSmall ? mRadiusInner : mRadius;
         Drawable drawable = getContext().getResources().getDrawable(res);
         Rect desRect = new Rect(mCenterPointer.x - localRadius, mCenterPointer.y - localRadius, mCenterPointer.x + localRadius, mCenterPointer.y + localRadius);
         drawable.setBounds(desRect);
         drawable.draw(canvas);
     }
 
+
     private void drawFirstLine(Canvas canvas) {
-        switch (lastState) {
-            case COMPLETE:
-                mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_selected}, mStrokeColor.getDefaultColor()));
-                break;
-            case INACTIVE:
-                mPaint.setColor(mStrokeColor.getDefaultColor());
-                break;
-            case ACTIVE:
-                mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_activated}, mStrokeColor.getDefaultColor()));
-                break;
-        }
+        obtainStrokeColorWithStatusAndStyle(true);
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
                 float localEndX = getPaddingLeft() + stroke1AnimatorValue * (mCenterPointer.x - getPaddingLeft()) - markerAnimatorValue * (mRadiusInner - mStrokeWidth);
@@ -483,8 +490,34 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
         }
     }
 
-    private void drawSecondLine(Canvas canvas) {
-        switch (nextState) {
+    private void obtainStrokeColorWithStatusAndStyle(boolean isFirst) {
+        switch (mStrokeStyle) {
+            case NONE:
+                mPaint.setColor(mStrokeColor.getDefaultColor());
+                break;
+            case FORWARD:
+                if (isFirst) {
+                    obtainByState(mCurrentStatus);
+                } else {
+                    obtainByState(nextState);
+                }
+                break;
+            case BACKWARD:
+                if (isFirst) {
+                    obtainByState(lastState);
+                } else {
+                    obtainByState(mCurrentStatus);
+                }
+                break;
+            case CURRENT:
+                obtainByState(mCurrentStatus);
+            default:
+                throw new IllegalArgumentException("error stroke style");
+        }
+    }
+
+    private void obtainByState(int status) {
+        switch (status) {
             case COMPLETE:
                 mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_selected}, mStrokeColor.getDefaultColor()));
                 break;
@@ -495,6 +528,11 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 mPaint.setColor(mStrokeColor.getColorForState(new int[]{android.R.attr.state_activated}, mStrokeColor.getDefaultColor()));
                 break;
         }
+    }
+
+
+    private void drawSecondLine(Canvas canvas) {
+        obtainStrokeColorWithStatusAndStyle(false);
         switch (mDirectionStyle) {
             case TimeLineView.HORIZONTAL:
                 float localEndX = mCenterPointer.x + mRadiusInner - mStrokeWidth + stroke2AnimatorValue * (mMeasuredWidth - getPaddingRight() - (mCenterPointer.x + mRadiusInner - mStrokeWidth));

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="TimeLineView">
+        <attr name="strokeStyle" format="enum">
+            <enum name="NONE" value="0"/>
+            <enum name="FORWARD" value="1"/>
+            <enum name="BACKWARD" value="2"/>
+            <enum name="CURRENT" value="3"/>
+        </attr>
         <attr name="strokeWidth" format="dimension"/>
         <attr name="relativeGravity" format="enum">
             <enum name="BEGIN" value="0"/>
