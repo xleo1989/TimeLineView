@@ -511,6 +511,7 @@ public class TimeLineView extends android.support.v7.widget.AppCompatTextView {
                 break;
             case CURRENT:
                 obtainByState(mCurrentStatus);
+                break;
             default:
                 throw new IllegalArgumentException("error stroke style");
         }
